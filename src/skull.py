@@ -1,18 +1,19 @@
 """
-This module provides an software to skull stripping of a given modality.
+Performs skull stripping and tissue segmentations based on atlas registration
+Employs ANTs for registration and the SRI24 atlas as template
 
 Usage:
     Initialize an instance.
-    e.g:
-        skull_stripper = SkullStripper()
+    skull_stripper = SkullStripper()
 
     Run skull stripping method:
-    e.g:
-        mask_path = skull.stripper.strip_skull(input_path, output_path, want_tissues)
+    skull.stripper.strip_skull(input_path, output_path, want_tissues)
+
+@author: jana lipkova
 """
 
 import subprocess
-import shlex
+#import shlex
 import os
 import src.helpers as utils
 import numpy as np
@@ -20,7 +21,8 @@ import nibabel as nib
 from nilearn.masking import apply_mask
 from nilearn.image import load_img, math_img, threshold_img
 import time
-import src.registration as reg
+
+#import src.registration as reg
 
 class SkullStripper():
 
@@ -36,55 +38,56 @@ class SkullStripper():
 
         self.name = os.path.splitext(os.path.splitext(os.path.basename(input_path))[0])[0]
         self.atlas = utils.get_relative_path("Atlas")
-        self.ss_sh_path = utils.get_relative_path(os.path.join("sh", "skull_strip.sh"))
 
-    #Deformable registration of the stripped atlas to the anatomy using NiftyReg
-    #@param atlas_path : path to the skull stripped atlas
-    #@param anatomy_path : path to the stripped modality
-    def deformable_registration(self, atlas_path, anatomy_path):
-        print("\n Deformable tissue registration started \n -----------------")
-        aff_reg = utils.get_relative_path('t1_atlas_aff_reg.nii.gz')
-        aff_trans = utils.get_relative_path('t1_atlas_aff_transformation.txt')
-        f3d_cpp = utils.get_relative_path('t1_atlas_f3d_cpp.nii.gz')
-        f3d_reg = utils.get_relative_path(self.name + '_atlas_reg_deform.nii.gz')
-        tissue_reg = utils.get_relative_path(os.path.join(self.output_path, self.name))
-        tissueAtlas = utils.get_relative_path(os.path.join(self.output_path, self.name + '_'))
+    # Compute non-deformable (translation -> rigid -> affine) registrations of moving to fixed image,
+    # output is the base name for the computed registration
+    # return name of the transformaiton file
+    def compute_rigid_registration(self, moving_image, fixed_image, output):
+    	imgs = fixed_image + ", " + moving_image 
 
-        reg.niftireg_affine_registration(atlas_path, anatomy_path, transform_path=aff_trans, result_path=aff_reg)
-        reg.niftireg_nonrigid_registration(atlas_path, anatomy_path, transform_path = aff_trans, cpp_path=f3d_cpp, result_path=f3d_reg)
- #       reg.niftireg_nonrigid_registration(atlas_path, anatomy_path, cpp_path=f3d_cpp, result_path=f3d_reg)	
-    
-	
-	for tissue in ["csf", "gm", "wm"]:
-            reg.niftireg_transform(tissueAtlas + tissue + ".nii.gz",anatomy_path,f3d_cpp,result_path=tissue_reg + "_" + tissue + "temp.nii.gz",cpp=True)
-            img = nib.load(tissue_reg + "_" + tissue + "temp.nii.gz")
-            mask = math_img('(img - np.min(img))/(np.max(img)-np.min(img))',img=img)
-            nib.save(mask, tissue_reg + "_" + tissue + "temp.nii.gz")
-            os.remove(tissueAtlas + tissue + ".nii.gz")
-            os.rename(tissueAtlas + tissue + "temp.nii.gz", tissueAtlas + tissue + ".nii.gz")
-            print("%s image is saved to: %s" % (tissue, tissueAtlas + tissue + ".nii.gz"))
- 
-	os.remove(aff_reg)
-        os.remove(aff_trans)
-        os.remove(f3d_cpp)
-        os.remove(f3d_reg)
+        ants_call = ( " antsRegistration -d 3 -r [" + imgs + ", 1]" +
+		  " -t translation[0.1]" +
+		  " -m mattes[" + imgs + ", 1, 32, regular, 0.05]" +
+		  " -c [1000, 1e-8, 20] -s 4vox -f 6 -l 1 " +
+		  " -t rigid[0.1]" +
+		  " -m mattes[" + imgs + ", 1, 32, regular, 0.1]" +
+		  " -c [1000x1000, 1e-8, 20] -s 4x2vox -f 4x2 -l 1" +
+		  " -t affine[0.1]" +
+		  " -m mattes[" + imgs + " , 1 , 32, regular, 0.1 ]" +
+		  " -c [10000x1111x5, 1e-8, 20] -s 4x2x1vox -f 3x2x1 -l 1" +
+                  " -o " + output )
 
-        #print("----------\n Deformable tissue registration finished.")
+        subprocess.call(ants_call, shell=True, stdout=subprocess.PIPE) 
+        output = output + "0GenericAffine.mat"
+        return output
 
-    #Apply a mask to the modality
-    #@param anatomy_path : Path to the input modality
-    #@param mask_path : Path to the brain mask
-    #@param output_name: output name of the stripped modality
-    def apply_mask(self, image_path, mask_path, output_name):
-        mask       = nib.load(os.path.join(self.output_path, mask_path))
-        patient    = nib.load(image_path)
+    	
+    # Compute deformable (non-linear SyN) registration and output the transformation file
+    def compute_non_rigid_registration(self, moving_image, fixed_image, mask, output):
+	imgs = fixed_image + ", " + moving_image
+        
+	ants_call = (" antsRegistration -d 3 " +
+                     " -m mattes[" + imgs + ", 1, 32, Regular, 0.25] " +
+                     " -t SyN[ 0.1, 3, 0 ] " +
+                     " -c [ 100x50x25, 1e-8, 20] " +
+                     " -s 3x2x0vox -f 8x4x2 " +
+		     " -x " + mask +
+                     " -o " + output )
 
-        masked_data = np.multiply(patient.get_data(), mask.get_data())
-        masked_data = nib.Nifti1Image(masked_data, patient.affine, patient.header)
-        path_to_save = utils.get_relative_path(os.path.join(self.output_path,  output_name + ".nii.gz"))
-        nib.save(masked_data, path_to_save)
-        return path_to_save
+ 	subprocess.call(ants_call, shell=True, stdout=subprocess.PIPE)
+        output = output + "0Warp.nii.gz"
+	return output
 
+    # Apply computed transformation to register the moving image to the fixed image, store result in the output file
+    def apply_transformation(self, moving_image, fixed_image, transform, output):   
+	antstf_call = (" antsApplyTransforms -d 3" + 
+		       " -i " + moving_image + 
+		       " -r " + fixed_image + 
+                       " -t " + transform + 
+                       " -o " + output + ".nii.gz" 
+                       + " --float 1")
+
+        subprocess.call(antstf_call, shell=True, stdout=subprocess.PIPE)
 
     def strip_skull(self):
         
@@ -92,69 +95,70 @@ class SkullStripper():
         print("Skull stripping started. \n --------------------------- \n")
         print("Input Modality: %s \n" % self.input_path)
         print("Output Folder : %s \n" % self.output_path)
+      
+        #1) Rigid registration: Atlas to Patient, apply the tranformation to get basic mask + tissue approximations
+	print("Computing the basic mask: \n ---------------" )
+        #moving = self.atlas + "/atlas_t1.nii"
+	moving = self.atlas + "/atlas_pd.nii"
+        fixed  = self.input_path
+        output = self.output_path + "/" + self.name + "_atlas_reg"
+
+        transform = self.compute_rigid_registration(moving, fixed, output)       
+        self.apply_transformation(moving, fixed, transform, output) 
+
+        #1.1) Apply the transformation to map atlas mask and tissue to patient space
+  	for tissue in ["mask", "wm", "gm", "csf"]:
+	    moving = self.atlas + "/atlas_" + tissue + ".nii"
+	    output = self.output_path + "/" + self.name + "_" + tissue + ".nii.gz"
+	    self.apply_transformation(moving, fixed, transform,output)
+
+	# make the mask binary 
+        mask = nib.load(self.output_path + "/" + self.name + "_mask.nii.gz")
+        mask = math_img("img > 0.9", img=mask)
+	nib.save(mask,self.output_path + "/" + self.name + "_mask.nii.gz")
+
  
-        #1) Rigid registration of Atlas to Patient -> basic mask + tissue approximations
-	print("\nCompute basic mask: \n -----------------")
-	moving_image = self.atlas
-        fixed_image = self.input_path
-        command = shlex.split("%s %s %s %s %s" % (self.ss_sh_path, fixed_image, moving_image, self.output_path, self.name))
-        stripping = subprocess.call(command)
+	# 2) Refine by using deformable registration, with the above mask for masking
+	print("Deformable registration \n")
+        moving = self.output_path + "/" + self.name + "_atlas_reg.nii.gz"
+	fixed  = self.input_path
+	mask   = self.output_path + "/" + self.name + "_mask.nii.gz"
+        output = self.output_path + "/atlas_def_reg.nii.gz"
 
-        # make the mask binary
-        atlas_reg_path = os.path.join(self.output_path, self.name + "_atlas_reg.nii")
-        basic_mask_path = os.path.join(self.output_path, self.name + "_mask.nii.gz")
-        mask = nib.load(os.path.join(basic_mask_path))
-        mask = math_img('img > 0.9', img=mask)
-        nib.save(mask, basic_mask_path)
+        transform = self.compute_non_rigid_registration(moving, fixed, mask, output)
+        self.apply_transformation(moving, fixed, transform, output)
+	
+        print("Tissue registration \n")
+	for tissue in ["mask", "wm", "gm", "csf"]:
+            moving = self.output_path + "/" + self.name + "_" + tissue + ".nii.gz"
+            output = self.output_path + "/" + self.name + "_" + tissue + "_ref.nii.gz"
+            self.apply_transformation(moving, fixed, transform,output)
+  	
+	# 3) Apply the basic and new mask
+	mask_basic  = nib.load(os.path.join(self.output_path, self.name + "_mask.nii.gz"))
+ 	mask_refine = nib.load(os.path.join(self.output_path, self.name + "_mask_ref.nii.gz"))
+	patient     = nib.load(self.input_path)
         
-   
-        #2) deformable registration between skull stripper atlas and skull strip patient (use the basic mask)
-	#stripping = subprocess.call(command)
-    	stripped_atlas = self.apply_mask(atlas_reg_path, self.name + "_mask.nii.gz", "masked_atlas")
-        stripped_image = self.apply_mask(fixed_image, self.name + "_mask.nii.gz", self.name + "_masked_basic")
-	self.deformable_registration(stripped_atlas, stripped_image)
-  
-        # rename the first mask
-        os.rename(basic_mask_path, os.path.join(self.output_path, self.name + "_mask_basic.nii.gz"))
+	masked_patient_basic   = np.multiply(patient.get_data(), mask_basic.get_data())
+	masked_patient_refine  = np.multiply(patient.get_data(), mask_refine.get_data())
+
+	masked_patient_basic   = nib.Nifti1Image( masked_patient_basic, patient.affine, patient.header)
+	masked_patient_refine  = nib.Nifti1Image( masked_patient_refine, patient.affine, patient.header)
+	nib.save(masked_patient_basic, os.path.join(self.output_path, self.name + "_masked_basic.nii.gz"))
+        nib.save(masked_patient_refine, os.path.join(self.output_path, self.name + "_masked.nii.gz"))
 
 
-        # 3) Compute new mask from the tissue approximations
-        print("\nComputing refined mask \n -------------")
-        wm_path  = os.path.join(self.output_path,  self.name + "_wm.nii.gz")
-        gm_path  = os.path.join(self.output_path,  self.name + "_gm.nii.gz")
-        csf_path = os.path.join(self.output_path,  self.name + "_csf.nii.gz")
+        # 4) Clean-up
+	os.rename(self.output_path + "/" + self.name + "_wm_ref.nii.gz", self.output_path + "/" + self.name + "_wm.nii.gz")
+        os.rename(self.output_path + "/" + self.name + "_gm_ref.nii.gz", self.output_path + "/" + self.name + "_gm.nii.gz")
+        os.rename(self.output_path + "/" + self.name + "_csf_ref.nii.gz",self.output_path + "/" + self.name + "_csf.nii.gz")
+ 	os.rename(self.output_path + "/" + self.name + "_mask.nii.gz",   self.output_path + "/" + self.name + "_mask_basic.nii.gz")    
+        os.rename(self.output_path + "/" + self.name + "_mask_ref.nii.gz",   self.output_path + "/" + self.name + "_mask.nii.gz") 
 
-        wm = nib.load(wm_path)
-        gm = nib.load(gm_path)
-        csf = nib.load(csf_path)
-        
-        refined_mask = np.add( wm.get_data(), gm.get_data())
-        refined_mask = np.add( refined_mask, csf.get_data() )
-	refined_mask = nib.Nifti1Image(refined_mask, wm.affine, wm.header)
-        refined_mask = math_img('img > 0.55', img=refined_mask)
-        path_to_save = utils.get_relative_path(os.path.join(self.output_path, self.name + "_mask.nii.gz"))
-	nib.save(refined_mask, path_to_save)
-
-
-        # 4) Apply the refine mask to image and to modalities
-        print("Applying refined mask \n")
-        stripped_image = self.apply_mask(fixed_image, self.name + "_mask.nii.gz", self.name + "_masked" )
-        print("Results save as %s \n" % stripped_image)       
- 
-        if self.want_tissues:
-        	wm  = self.apply_mask(wm_path,  self.name + "_mask.nii.gz", self.name + "_wm") 
-        	gm  = self.apply_mask(gm_path,  self.name + "_mask.nii.gz", self.name + "_gm")
-        	csf = self.apply_mask(csf_path, self.name + "_mask.nii.gz", self.name + "_csf")
-        else:
-                os.remove(wm_path)
-                os.remove(gm_path)
-                os.remove(csf_path)
-
-        # Clean up
-        os.remove(stripped_atlas)
-        os.remove(os.path.join(self.output_path, self.name + "_atlas_reg.nii"))
-        os.remove(os.path.join(self.output_path, self.name + "_atlas_reg.nii0GenericAffine.mat"))
+	os.remove(os.path.join(self.output_path, self.name + "_atlas_reg.nii.gz"))
+        os.remove(os.path.join(self.output_path, "atlas_def_reg.nii.gz"))
+	os.remove(os.path.join(self.output_path, "atlas_def_reg.nii.gz0Warp.nii.gz"))
+        os.remove(os.path.join(self.output_path, "atlas_def_reg.nii.gz0InverseWarp.nii.gz"))
+	os.remove(os.path.join(self.output_path, self.name + "_atlas_reg0GenericAffine.mat"))
        
-         
-
-        print('---------------------------\nSkull Stripping Finished.')
+        print('---------------------------\nSkull Stripping Finished.') 
