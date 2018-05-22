@@ -1,0 +1,7 @@
+Description of the folder content:
+
+atlas_pd   = proton density weighted MRI atlas
+atlas_mask = binary mask of the atlas brain, mask was created as a sum of segmented atlas anatomies
+atlas_*    = segmenation of the atlas anatomies: wm, gm, csf
+
+See the attached COPYING folder for the copyrights.
