@@ -32,10 +32,15 @@ pip install -r requirements.txt
 
 2) Install ANTs with instructions provided at https://github.com/ANTsX/ANTs/wiki/Compiling-ANTs-on-Linux-and-Mac-OS
 
-3) Set the path to the installed libraries by updating your ~/.profile or ~/.basrc file with the following lines, where the first line contains path to YOUR library:
+3) Install NiftyReg with instructions provided at http://cmictig.cs.ucl.ac.uk/wiki/index.php/NiftyReg_install. If using the s3_ants branch, then one doesn't need to install NiftyReg, since all NiftyReg routines are replaced by ANTs. This branch works, however it is still under development.
+
+4) Set the path to the installed libraries by updating your ~/.profile or ~/.basrc file with the following lines, where the first line contains path to YOUR library:
 ```
 export ANTSPATH=/home/jana/Work/Ants/stnava-ANTs-a430c38/antsbin/bin/
 export PATH=$PATH:$ANTSPATH
+
+export NIFTYREG_INSTALL=/home/jana/Work/libs/nifty_reg-1.3.9/niftyreg_install
+export PATH=${PATH}:${NIFTYREG_INSTALL}/bin
 ```
 
 # Run
@@ -49,17 +54,17 @@ Parameters:
 3) -t : Use this when the tissue registrations for white matter, gray matter and cerebral spinal fluid are required (Optional)
 
 # Example 
-Folder s3/example/ contains test scan called T1.nii To apply the s3 method to the example scan:
+Folder s3/example/ contains test scan called T1.nii.gz To apply the s3 method to the example scan:
 ```
 cd s3
-python s3.py -i example/T1.nii
+python s3.py -i example/T1.nii.gz 
 ```
 This command would apply the skull stripping procedure on the input file "t1.nii" file and stores the output, the brain mask and stripped brain scan, in the same folder as the input file. 
 
 ----------------------------------------------------------
 To save results to differen than the input folder, use flag -o
 ```
-python s3.py -i example/T1.nii -o output 
+python s3.py -i example/T1.nii.gz -o output 
 ```
 Where output is the name of the output folder. If the specified output folder does not exist, it will be created.
 
@@ -67,7 +72,7 @@ Where output is the name of the output folder. If the specified output folder do
 
 To enable computation of tissue segmentation use flag -t:
 ```
-python s3.py -i example/T1.nii -o output/  -t 
+python s3.py -i example/T1.nii.gz -o output/  -t 
 ```
 This command performs skulls stripping of input image, and outputs the brain mask, skull-stripped scan, soft segmentations of white, grey matter and csf.
 
@@ -75,4 +80,5 @@ This command performs skulls stripping of input image, and outputs the brain mas
 # Acknowledgement
 * Esther Albers, Enes Senel
 
+:fox_face:
 :panda_face:
