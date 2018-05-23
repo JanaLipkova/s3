@@ -55,7 +55,8 @@ class SkullStripper():
 		  " -t affine[0.1]" +
 		  " -m mattes[" + imgs + " , 1 , 32, regular, 0.1 ]" +
 		  " -c [10000x1111x5, 1e-8, 20] -s 4x2x1vox -f 3x2x1 -l 1" +
-                  " -o " + output )
+	          " -w [0.25, 0.75] " +
+		  " -o " + output )
 
         subprocess.call(ants_call, shell=True, stdout=subprocess.PIPE) 
         output = output + "0GenericAffine.mat"
@@ -71,6 +72,7 @@ class SkullStripper():
                      " -t SyN[ 0.1, 3, 0 ] " +
                      " -c [ 100x50x25, 1e-8, 20] " +
                      " -s 3x2x0vox -f 8x4x2 " +
+		     " -w [0.25, 0.75] " +
 		     " -x " + mask +
                      " -o " + output )
 
@@ -146,7 +148,6 @@ class SkullStripper():
 	masked_patient_refine  = nib.Nifti1Image( masked_patient_refine, patient.affine, patient.header)
 	nib.save(masked_patient_basic, os.path.join(self.output_path, self.name + "_masked_basic.nii.gz"))
         nib.save(masked_patient_refine, os.path.join(self.output_path, self.name + "_masked.nii.gz"))
-
 
         # 4) Clean-up
 	os.rename(self.output_path + "/" + self.name + "_wm_ref.nii.gz", self.output_path + "/" + self.name + "_wm.nii.gz")

@@ -73,7 +73,6 @@ This command performs skulls stripping of input image, and outputs the brain mas
 
 
 # Acknowledgement
-* Esther Albers, Enes Senel
+* Esther Albers, Benedikt Wiestler, Enes Senel
 
-:fox_face:
 :panda_face:
