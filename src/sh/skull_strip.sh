@@ -5,7 +5,7 @@
 m="$2"
 out="$3"
 f_in="$1"
-m_in=${m}/atlas_pd.nii
+m_in=${m}/atlas_t1.nii
 name="$4"
 out_this=${out}/${name}_atlas_reg.nii 
 imgs=" $f_in, $m_in"

@@ -131,7 +131,7 @@ class SkullStripper():
         refined_mask = np.add( wm.get_data(), gm.get_data())
         refined_mask = np.add( refined_mask, csf.get_data() )
 	refined_mask = nib.Nifti1Image(refined_mask, wm.affine, wm.header)
-        refined_mask = math_img('img > 0.55', img=refined_mask)
+        refined_mask = math_img('img > 0.3', img=refined_mask)
         path_to_save = utils.get_relative_path(os.path.join(self.output_path, self.name + "_mask.nii.gz"))
 	nib.save(refined_mask, path_to_save)
 
