@@ -55,7 +55,6 @@ class SkullStripper():
 		  " -t affine[0.1]" +
 		  " -m mattes[" + imgs + " , 1 , 32, regular, 0.1 ]" +
 		  " -c [10000x1111x5, 1e-8, 20] -s 4x2x1vox -f 3x2x1 -l 1" +
-	          " -w [0.25, 0.75] " +
 		  " -o " + output )
 
         subprocess.call(ants_call, shell=True, stdout=subprocess.PIPE) 
@@ -100,8 +99,8 @@ class SkullStripper():
       
         #1) Rigid registration: Atlas to Patient, apply the tranformation to get basic mask + tissue approximations
 	print("Computing the basic mask: \n ---------------" )
-        #moving = self.atlas + "/atlas_t1.nii"
-	moving = self.atlas + "/atlas_pd.nii"
+        moving = self.atlas + "/atlas_t1.nii"
+	#moving = self.atlas + "/atlas_pd.nii"
         fixed  = self.input_path
         output = self.output_path + "/" + self.name + "_atlas_reg"
 
