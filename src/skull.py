@@ -52,9 +52,8 @@ class SkullStripper():
 
         reg.niftireg_affine_registration(atlas_path, anatomy_path, transform_path=aff_trans, result_path=aff_reg)
         reg.niftireg_nonrigid_registration(atlas_path, anatomy_path, transform_path = aff_trans, cpp_path=f3d_cpp, result_path=f3d_reg)
- #       reg.niftireg_nonrigid_registration(atlas_path, anatomy_path, cpp_path=f3d_cpp, result_path=f3d_reg)	
     
-	
+ 	# Apply tranfromaton to the brain tissue	
 	for tissue in ["csf", "gm", "wm"]:
             reg.niftireg_transform(tissueAtlas + tissue + ".nii.gz",anatomy_path,f3d_cpp,result_path=tissue_reg + "_" + tissue + "temp.nii.gz",cpp=True)
             img = nib.load(tissue_reg + "_" + tissue + "temp.nii.gz")
@@ -64,6 +63,11 @@ class SkullStripper():
             os.rename(tissueAtlas + tissue + "temp.nii.gz", tissueAtlas + tissue + ".nii.gz")
             print("%s image is saved to: %s" % (tissue, tissueAtlas + tissue + ".nii.gz"))
  
+	# Apply transformation to brain mask
+	basicMaskPath = os.path.join(self.output_path, self.name + "_mask.nii.gz")
+        refinedMaskPath = os.path.join(self.output_path, self.name + "_mask_refined_reg.nii.gz")
+        reg.niftireg_transform(basicMaskPath,anatomy_path,f3d_cpp,result_path=refinedMaskPath,cpp=True)
+
 	os.remove(aff_reg)
         os.remove(aff_trans)
         os.remove(f3d_cpp)
