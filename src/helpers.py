@@ -13,6 +13,8 @@ def getopts(argv):
         if argv[0][0] == '-':  # Found a "-name value" pair.
         	if argv[0][1] == "t":
         		opts[argv[0]] = 1
+		elif argv[0][1] == "a":
+		        opts[argv[0]] = 1
         	else:
         		opts[argv[0]] = argv[1]  # Add key and value to the dictionary.
         argv = argv[1:]  # Reduce the argument list by copying it starting from index 1.

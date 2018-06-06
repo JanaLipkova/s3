@@ -19,6 +19,10 @@ import numpy as np
 import nibabel as nib
 from nilearn.masking import apply_mask
 from nilearn.image import load_img, math_img, threshold_img
+
+import scipy as sp
+import scipy.stats
+
 import time
 import src.registration as reg
 
@@ -28,14 +32,15 @@ class SkullStripper():
     #@param input_path : Path to the input modality to skull strip
     #@param output_path : Path the to output folder.
     #@param want_tissue: Boolean for outputting the tissue registrations 
-    def __init__(self, input_path, output_path, want_tissues):
+    def __init__(self, input_path, output_path, want_tissues, want_atlas):
 
-        self.input_path = input_path
-        self.output_path = output_path
+        self.input_path   = input_path
+        self.output_path  = output_path
         self.want_tissues = want_tissues
+	self.want_atlas   = want_atlas	
 
-        self.name = os.path.splitext(os.path.splitext(os.path.basename(input_path))[0])[0]
-        self.atlas = utils.get_relative_path("Atlas")
+        self.name  	= os.path.splitext(os.path.splitext(os.path.basename(input_path))[0])[0]
+        self.atlas 	= utils.get_relative_path("Atlas")
         self.ss_sh_path = utils.get_relative_path(os.path.join("sh", "skull_strip.sh"))
 
     #Deformable registration of the stripped atlas to the anatomy using NiftyReg
@@ -71,9 +76,13 @@ class SkullStripper():
 	os.remove(aff_reg)
         os.remove(aff_trans)
         os.remove(f3d_cpp)
-        os.remove(f3d_reg)
+		
+	if self.want_atlas:
+		regAtlasPath = os.path.join(self.output_path, self.name + "_atlas_reg_deform.nii.gz")
+		os.rename(f3d_reg,regAtlasPath)
+	else:
+        	os.remove(f3d_reg)
 
-        #print("----------\n Deformable tissue registration finished.")
 
     #Apply a mask to the modality
     #@param anatomy_path : Path to the input modality
@@ -83,7 +92,7 @@ class SkullStripper():
         mask       = nib.load(os.path.join(self.output_path, mask_path))
         patient    = nib.load(image_path)
 
-        masked_data = np.multiply(patient.get_data(), mask.get_data())
+	masked_data = np.multiply(patient.get_data(), mask.get_data())
         masked_data = nib.Nifti1Image(masked_data, patient.affine, patient.header)
         path_to_save = utils.get_relative_path(os.path.join(self.output_path,  output_name + ".nii.gz"))
         nib.save(masked_data, path_to_save)
@@ -109,9 +118,8 @@ class SkullStripper():
         basic_mask_path = os.path.join(self.output_path, self.name + "_mask.nii.gz")
         mask = nib.load(os.path.join(basic_mask_path))
         mask = math_img('img > 0.9', img=mask)
-        nib.save(mask, basic_mask_path)
-        
-   
+        nib.save(mask, basic_mask_path)        
+
         #2) deformable registration between skull stripper atlas and skull strip patient (use the basic mask)
 	#stripping = subprocess.call(command)
     	stripped_atlas = self.apply_mask(atlas_reg_path, self.name + "_mask.nii.gz", "masked_atlas")
@@ -132,12 +140,32 @@ class SkullStripper():
         gm = nib.load(gm_path)
         csf = nib.load(csf_path)
         
-        refined_mask = np.add( wm.get_data(), gm.get_data())
-        refined_mask = np.add( refined_mask, csf.get_data() )
-	refined_mask = nib.Nifti1Image(refined_mask, wm.affine, wm.header)
-        refined_mask = math_img('img > 0.3', img=refined_mask)
-        path_to_save = utils.get_relative_path(os.path.join(self.output_path, self.name + "_mask.nii.gz"))
-	nib.save(refined_mask, path_to_save)
+	# soft mask + remove background
+        soft_mask  = np.add( wm.get_data(), gm.get_data())
+        soft_mask  = np.add( soft_mask, csf.get_data() )
+	background = np.min(soft_mask)
+	soft_mask[ soft_mask <= 2* background] = 0 
+        soft_mask     = nib.Nifti1Image(soft_mask, wm.affine, wm.header)
+        path_to_save = utils.get_relative_path(os.path.join(self.output_path, self.name + "_mask_soft.nii.gz"))
+        nib.save(soft_mask,    path_to_save)
+
+        # cut outliers from the soft mask
+	data   = np.reshape(soft_mask.get_data(), (1,np.product(soft_mask.get_data().shape))) 
+	dataNN = data[data != 0]
+	m      = np.mean(dataNN)
+	s      = np.std(dataNN)
+	LB     = m - 2*s
+	refined_mask = soft_mask.get_data()
+	refined_mask[ refined_mask < LB ] = 0
+	refined_mask[ refined_mask > LB ] = 1
+	refined_mask 	  = nib.Nifti1Image(refined_mask, wm.affine, wm.header)       
+	path_to_save_mask = utils.get_relative_path(os.path.join(self.output_path, self.name + "_mask.nii.gz"))
+	nib.save(refined_mask, path_to_save_mask)
+
+	# thresholded mask for comparison
+        #thr_mask = math_img('img > 0.3', img=soft_mask)
+        #path_to_save = utils.get_relative_path(os.path.join(self.output_path, self.name + "_mask_thr.nii.gz"))
+	#nib.save(thr_mask, path_to_save)
 
 
         # 4) Apply the refine mask to image and to modalities
@@ -145,14 +173,11 @@ class SkullStripper():
         stripped_image = self.apply_mask(fixed_image, self.name + "_mask.nii.gz", self.name + "_masked" )
         print("Results save as %s \n" % stripped_image)       
  
-        if self.want_tissues:
-        	wm  = self.apply_mask(wm_path,  self.name + "_mask.nii.gz", self.name + "_wm") 
-        	gm  = self.apply_mask(gm_path,  self.name + "_mask.nii.gz", self.name + "_gm")
-        	csf = self.apply_mask(csf_path, self.name + "_mask.nii.gz", self.name + "_csf")
-        else:
+        if not self.want_tissues:
                 os.remove(wm_path)
                 os.remove(gm_path)
                 os.remove(csf_path)
+
 
         # Clean up
         os.remove(stripped_atlas)
@@ -160,5 +185,4 @@ class SkullStripper():
         os.remove(os.path.join(self.output_path, self.name + "_atlas_reg.nii0GenericAffine.mat"))
        
          
-
         print('---------------------------\nSkull Stripping Finished.')
