@@ -91,13 +91,19 @@ class SkullStripper():
     def apply_mask(self, image_path, mask_path, output_name):
         mask       = nib.load(os.path.join(self.output_path, mask_path))
         patient    = nib.load(image_path)
+         
+        # Reshape (in some cases data resolution is (x,y,z,1), reshape removes the 4th dimension
+        tmp1 = patient.get_data();
+        res   = tmp1.shape       
+	tmp2 = tmp1.reshape(res[0],res[1],res[2])
 
-	masked_data = np.multiply(patient.get_data(), mask.get_data())
+        masked_data = np.multiply(tmp2, mask.get_data())
+	#masked_data = np.multiply(patient.get_data(), mask.get_data())
         masked_data = nib.Nifti1Image(masked_data, patient.affine, patient.header)
         path_to_save = utils.get_relative_path(os.path.join(self.output_path,  output_name + ".nii.gz"))
         nib.save(masked_data, path_to_save)
         return path_to_save
-
+       
 
     def strip_skull(self):
         
@@ -161,11 +167,6 @@ class SkullStripper():
 	refined_mask 	  = nib.Nifti1Image(refined_mask, wm.affine, wm.header)       
 	path_to_save_mask = utils.get_relative_path(os.path.join(self.output_path, self.name + "_mask.nii.gz"))
 	nib.save(refined_mask, path_to_save_mask)
-
-	# thresholded mask for comparison
-        #thr_mask = math_img('img > 0.3', img=soft_mask)
-        #path_to_save = utils.get_relative_path(os.path.join(self.output_path, self.name + "_mask_thr.nii.gz"))
-	#nib.save(thr_mask, path_to_save)
 
 
         # 4) Apply the refine mask to image and to modalities

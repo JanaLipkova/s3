@@ -1,6 +1,5 @@
 #!/bin/sh
 
-
 for file in APT/*
 do
 echo "Processing folder:" ${file}
