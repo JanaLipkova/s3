@@ -76,6 +76,8 @@ python s3.py -i example/T1.nii -o output/  -t
 ```
 This command performs skulls stripping of input image, and outputs the brain mask, skull-stripped scan, soft segmentations of white, grey matter and csf.
 
+# References
+Please cite: Lipkova et al., *Personalized Radiotherapy Design for Glioblastoma Using Mathematical Models, Multimodal Scans and Bayesian Inference*, (accepted to IEEE TMI, currently available at https://arxiv.org/pdf/1807.00499.pdf)
 
 # Acknowledgement
 * Esther Albers, Enes Senel
