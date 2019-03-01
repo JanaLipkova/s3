@@ -160,7 +160,7 @@ class SkullStripper():
 	dataNN = data[data != 0]
 	m      = np.mean(dataNN)
 	s      = np.std(dataNN)
-	LB     = m - 2*s
+	LB     = m - 3.0*s
 	refined_mask = soft_mask.get_data()
 	refined_mask[ refined_mask < LB ] = 0
 	refined_mask[ refined_mask > LB ] = 1
