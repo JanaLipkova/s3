@@ -32,7 +32,7 @@ pip install -r requirements.txt
 
 2) Install ANTs with instructions provided at https://github.com/ANTsX/ANTs/wiki/Compiling-ANTs-on-Linux-and-Mac-OS
 
-3) Install NiftyReg with instructions provided at http://cmictig.cs.ucl.ac.uk/wiki/index.php/NiftyReg_install. If using the s3_ants branch, then one doesn't need to install NiftyReg, since all NiftyReg routines are replaced by ANTs. This branch works, however it is still under development.
+3) Install NiftyReg with instructions provided at http://cmictig.cs.ucl.ac.uk/wiki/index.php/NiftyReg_install. The software come with experimental branch called s3_ants which does not require NiftyReg installation, however this branch is still under development and might not be stable. However, if you can't install NiftyReg you can use this branch for skull stripping.
 
 4) Set the path to the installed libraries by updating your ~/.profile or ~/.basrc file with the following lines, where the first line contains path to YOUR library:
 ```
