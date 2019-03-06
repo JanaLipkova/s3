@@ -10,7 +10,7 @@ Usage:
     e.g:
         mask_path = skull.stripper.strip_skull(input_path, output_path, want_tissues)
 """
-
+from __future__ import division
 import subprocess
 import shlex
 import os
