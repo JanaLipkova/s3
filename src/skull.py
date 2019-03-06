@@ -138,19 +138,24 @@ class SkullStripper():
 
         # 3) Compute new mask from the tissue approximations
         print("\nComputing refined mask \n -------------")
-        wm_path  = os.path.join(self.output_path,  self.name + "_wm.nii.gz")
-        gm_path  = os.path.join(self.output_path,  self.name + "_gm.nii.gz")
-        csf_path = os.path.join(self.output_path,  self.name + "_csf.nii.gz")
+        wm_path         = os.path.join(self.output_path,  self.name + "_wm.nii.gz")
+        gm_path         = os.path.join(self.output_path,  self.name + "_gm.nii.gz")
+        csf_path        = os.path.join(self.output_path,  self.name + "_csf.nii.gz")
+        basic_mask_path = os.path.join(self.output_path,  self.name + "_mask_basic.nii.gz")
 
-        wm = nib.load(wm_path)
-        gm = nib.load(gm_path)
-        csf = nib.load(csf_path)
-        
+        wm         = nib.load(wm_path)
+        gm         = nib.load(gm_path)
+        csf        = nib.load(csf_path)
+        basic_mask = nib.load(basic_mask_path)
+
 	# soft mask + remove background
         soft_mask  = np.add( wm.get_data(), gm.get_data())
         soft_mask  = np.add( soft_mask, csf.get_data() )
-	background = np.min(soft_mask)
-	soft_mask[ soft_mask <= 2* background] = 0 
+        soft_mask  = np.multiply(soft_mask, basic_mask.get_data() )
+
+	#background = np.min(soft_mask)
+	#soft_mask[ soft_mask <= 2* background] = 0 
+        
         soft_mask     = nib.Nifti1Image(soft_mask, wm.affine, wm.header)
         path_to_save = utils.get_relative_path(os.path.join(self.output_path, self.name + "_mask_soft.nii.gz"))
         nib.save(soft_mask,    path_to_save)
