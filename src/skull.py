@@ -17,13 +17,7 @@ import os
 import src.helpers as utils
 import numpy as np
 import nibabel as nib
-from nilearn.masking import apply_mask
-from nilearn.image import load_img, math_img, threshold_img
-
-import scipy as sp
-import scipy.stats
-
-import time
+from nilearn.image import math_img
 import src.registration as reg
 
 class SkullStripper():
