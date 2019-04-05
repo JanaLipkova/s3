@@ -1,11 +1,12 @@
-'''
+"""
 Created on Apr 24, 2015
 
 @author: Esther Alberts
-'''
+"""
 
 import os
 import src.paths
+
 
 def niftireg_affine_registration(moving_path,
                                  fixed_path,
@@ -24,7 +25,7 @@ def niftireg_affine_registration(moving_path,
         result path to the affine transformation matrix (.txt)
     result_path : str
         .nii or .nii.gz path to the resultant image
-    """       
+    """
 
     _check_overwrite_issue(moving_path, result_path)
     _check_existant(moving_path, fixed_path)
@@ -49,6 +50,7 @@ def niftireg_affine_registration(moving_path,
             err = 'Niftireg binary not found'
             raise RuntimeError(err)
 
+
 def niftireg_nonrigid_registration(moving_path,
                                    fixed_path,
                                    transform_path=None,
@@ -68,7 +70,7 @@ def niftireg_nonrigid_registration(moving_path,
         result path to a control point grid image (.nii, .nii.gz)
     result_path : str
         .nii or .nii.gz path to the resultant image
-    """    
+    """
 
     _check_overwrite_issue(moving_path, result_path)
     if result_path is None:
@@ -91,6 +93,7 @@ def niftireg_nonrigid_registration(moving_path,
         if ans != 0:
             err = 'Niftireg binary not found'
             raise RuntimeError(err)
+
 
 def niftireg_transform(moving_path,
                        fixed_path,
@@ -131,26 +134,28 @@ def niftireg_transform(moving_path,
     else:
         cmd += '-cpp ' + transform_path + ' '
     cmd += '-res ' + result_path + ' '
-    
+
     ans = os.system(cmd + ' > /dev/null')
     if ans != 0:
         cmd = paths.registration_dir + cmd
         ans = os.system(cmd + ' > /dev/null')
         if ans != 0:
             err = 'Niftireg binary not found'
-            raise RuntimeError(err)   
+            raise RuntimeError(err)
+
 
 def _check_overwrite_issue(moving_path, result_path):
     """ Throw an error if the moving path and the result path are identical. """
 
     if moving_path == result_path:
         raise RuntimeError('You cannot overwrite original files, ' + \
-                            'chose appropriate save paths')
-        
+                           'chose appropriate save paths')
+
+
 def _check_existant(*args):
     """ Throw an error if any of the paths doesnt exist. """
-    
+
     for path in args:
         if not os.path.exists(path):
-            err = path[-50:]+' doesnt exist'
+            err = path[-50:] + ' doesnt exist'
             raise ValueError(err)
