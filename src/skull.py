@@ -89,7 +89,7 @@ class SkullStripper():
         patient = nib.load(image_path)
 
         # Reshape (in some cases data resolution is (x,y,z,1), reshape removes the 4th dimension
-        tmp1 = patient.get_data();
+        tmp1 = patient.get_data()
         res = tmp1.shape
         tmp2 = tmp1.reshape(res[0], res[1], res[2])
 
