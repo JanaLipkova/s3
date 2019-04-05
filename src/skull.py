@@ -14,11 +14,11 @@ from __future__ import division
 import subprocess
 import shlex
 import os
-import src.helpers as utils
 import numpy as np
 import nibabel as nib
 from nilearn.image import math_img
-import src.registration as reg
+from . import helpers as utils
+from . import registration as reg
 
 
 class SkullStripper():

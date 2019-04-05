@@ -1,5 +1,5 @@
-from src.skull import SkullStripper
-import src.helpers as utils
+from .src.skull import SkullStripper
+from .src import helpers as utils
 import os
 import time
 

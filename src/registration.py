@@ -5,7 +5,7 @@ Created on Apr 24, 2015
 """
 
 import os
-import src.paths
+from . import paths
 
 
 def niftireg_affine_registration(moving_path,
