@@ -11,16 +11,24 @@
 # Method
 The method is based on atlas registrations. Here we use atlas of normal adult brain anatomy extracted from [sri24](https://www.nitrc.org/projects/sri24/). The method consist of the following steps:
 
-1. Compute rigid registration *f* between input brain scan and atlas (see the first blue box in figure below). Rigid registration is used, since the patient and atlas scan contains different anatomical structures like face, neck. In this case the deformable registration would result into artifical deformations.
-2. Use *f* to map atlas brain mask and tissue segmentations to the patient space (second blue box). The registered mask is a coarse approximation of the patient brain mask. However, it might not correctly capture the complex brain anatomy. 
-3. Use the registered atlas mask to mask patient and atlas scan (yellow arrow).
-4. Compute non-rigid registration *g*, mapping the skull stripped atlas to the skull stripper patient (green box). Since now both scans have same size, the deformable registration can be used.  
-5. Use *g* to map atlas tissue segmentations to the patient space (orange box). This leads to finer tissue segmentations accounting for complex patient structure.
-6. Fuse the patient tissue segmentations into brain mask. This is mask is more refined compared to the first coarse mask.
-7. Apply the refined mask to skull stripped the input image.
+ 1. **Input:** Head MRI scan (shown in the light blue frame in Figurew)
+ 2. Compute a rigid registration *f* that maps the brain atlas to the subject (Fig. blue box)
+ 3. Apply *f* to map the atlas brain mask and tissue segmentations to the subject scan (purple box). The registered mask provides a coarse approximation of the subject brain mask.
+ 4. Use the coarse brain mask to skull-strip the subject and the atlas scan (yellow box).
+ 5. Compute a non-rigid registration g that maps the masked atlas to the masked subject, accounting for the subject specific brain morphology (green box).
+ 6. Apply g to map the atlas tissue segmentations to the subject anatomies (orange box).
+ 7. Fuse the subject tissue segmentations to create a refined brain mask (orangebox). Compute a 95% percentile of the sum of all tissue segmentations and exclude values smaller than the lower bound of the 95% percentiles.
+ 8. Apply the refined brain mask to the input MRI scan (orange box).
+ 9. **Output:** Coarse and refined brain mask,skull-stripped input scan and tissue segmentations.
 
 
 ![alt text](src/pipeline.png) 
+
+# Distributions:
+The software comes with three branches
+ * **master** - python3 implementation 
+ * **s3_p27** - same as master brung but python2.7 implementation
+ * **s3_ants** - experimental branch, which use only ANTS library (not recommended)
 
 # Installation:
 
@@ -77,9 +85,9 @@ python s3.py -i example/T1.nii -o output/  -t
 This command performs skulls stripping of input image, and outputs the brain mask, skull-stripped scan, soft segmentations of white, grey matter and csf.
 
 # References
-Please cite: Lipkova et al., *Personalized Radiotherapy Design for Glioblastoma Using Mathematical Models, Multimodal Scans and Bayesian Inference*, (accepted to IEEE TMI, currently available at https://arxiv.org/pdf/1807.00499.pdf)
+Please cite: Lipkova et al., *Personalized Radiotherapy Design for Glioblastoma: Integrating Mathematical Tumor Models, Multimodal Scans and Bayesian Inference.*, IEEE Transaction on Medical Imaging, (2019), (also available at https://arxiv.org/pdf/1807.00499.pdf)
 
 # Acknowledgement
-* Esther Albers, Enes Senel
+* Esther Albers, Enes Senel, Florian Kofler
 
 :panda_face:
