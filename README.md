@@ -27,8 +27,8 @@ The method is based on atlas registrations. Here we use atlas of normal adult br
 # Distributions:
 The software comes with three branches
  * **master** - python3 implementation 
- * **s3_p27** - same as master brung but python2.7 implementation
- * **s3_ants** - experimental branch, which use only ANTS library (not recommended)
+ * **s3_p27** - same as the master brunch but python2.7 implementation
+ * **s3_ants** - experimental branch, which use only ANTS registration (not recommended)
 
 # Installation:
 
