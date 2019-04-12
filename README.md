@@ -88,6 +88,6 @@ This command performs skulls stripping of input image, and outputs the brain mas
 Please cite: Lipkova et al., *Personalized Radiotherapy Design for Glioblastoma: Integrating Mathematical Tumor Models, Multimodal Scans and Bayesian Inference.*, IEEE Transaction on Medical Imaging, (2019), (also available at https://arxiv.org/pdf/1807.00499.pdf)
 
 # Acknowledgement
-* Esther Albers, Enes Senel, Florian Kofler
+* Esther Alberts, Enes Senel, Florian Kofler
 
 :panda_face:
